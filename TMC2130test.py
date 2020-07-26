@@ -23,6 +23,7 @@ GPIO.output(24, True)
 spi0.open(0, 0)
 spi0.max_speed_hz = 100000
 spi0.mode = 3
+spi0.no_cs = False
 
 spi1.open(0, 1)
 spi1.max_speed_hz = 100000
@@ -57,7 +58,7 @@ while True:
     #print ["0x%02x"%x for x in res]
     GPIO.output(18, False)
     GPIO.output(24, False)
-    sleep(0.001)
+    sleep(0.0001)
     GPIO.output(18, True)
     GPIO.output(24, True)
-    sleep(0.001)
+    sleep(0.0001)
