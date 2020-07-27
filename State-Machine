@@ -1,0 +1,25 @@
+digraph {
+idle [label="Idle"];
+collect [label="Collect Image"];
+off [label="Powered Off"];
+boot [label="Booting"];
+ready [label="Ready"];
+home [label="Home Mirrors"];
+point [label="Point Mirrors"];
+tsc [label="Time Series Collect"];
+
+off -> boot;
+boot -> idle;
+idle -> home [color=green];
+home -> ready;
+ready -> collect [color=green];
+ready -> point [color=green];
+point -> ready;
+point -> collect;
+collect -> ready;
+ready -> idle [color=green];
+idle -> off [color=green];
+ready -> tsc [color=green];
+tsc -> ready;
+tsc -> ready [color=green];
+}
