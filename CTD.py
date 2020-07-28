@@ -12,6 +12,7 @@ OP_FFC  = 11
 OP_STP  = 12
 OP_WIE  = 13
 OP_WID  = 14
+OP_CRS  = 15
 
 OP_QSTA = 32
 OP_QANG = 33
