@@ -36,7 +36,7 @@ def readReg(addr):
 for i in range(64):
     print i, ["0x%02x"%x for x in readReg(i)]
 
-print writeReg(52,[0, 0, 0x20]) #Set en_sd
+print writeReg(52,[0, 0, 0x30]) #Set en_sd, invert direction
 print writeReg(0x03, [0, 0, 30]) #Vmax
 print writeReg(0x06, [0, 0, 20]) #Amax
 print writeReg(0x02, [0, 0, 1]) #Vmin
@@ -48,10 +48,54 @@ print writeReg(0x12, [0, 0, 1])
 print writeReg(0x10, [0, 0, 0])
 sleep(1)
 
+def home():
+    print "Homing..."
+    #Get current switch state
+    switch = ( (readReg(1)[0] & 2) != 0 )
+    if switch:
+        print "Switch started triggered. Moving off..."
+        currentPos = readReg(1)
+        currentPos = (currentPos[1] << 16) + (currentPos[2] << 8) + (currentPos[3])
+        print "Position:", currentPos
+        #Go forward some
+        newPos = currentPos + 512
+        writeReg(0x00, [newPos >> 16, newPos >> 8, newPos])
+        sleep(1)
+        print "Position:", readReg(1)
+        #Recheck switch
+        switch = ( (readReg(1)[0] & 2) != 0 )
+        print "Switch is now", switch
+    if not switch:
+        #Assume we're at full-right position
+        writeReg(1, [0x0f, 0xff, 0xff])
+        #Prime X_Latched
+        writeReg(14, [0, 0, 0])
+        #Head towards 0
+        writeReg(0x00, [0, 0, 0])
+        while not switch:
+            switch = ( (readReg(1)[0] & 2) != 0 )
+        print "Hit switch..."
+        trigPos = readReg(14)
+        print "Triggered at", trigPos
+        #Go to trigger position
+        writeReg(0, [trigPos[1], trigPos[2], trigPos[3]])
+        sleep(1)
+        #set to 0
+        writeReg(1, [0, 0, 0])
+
+
 val = 0
 while True:
-    print readReg(1)
-    print writeReg(0x00, [val >> 16, val >> 8, val])
-    print writeReg(0x10, [val >> 16, val >> 8, val])
-    val += 256
-    sleep(0.3)
+    home()
+    while val < 2048:
+        print "Register 1:", readReg(1)
+        writeReg(0x00, [val >> 16, val >> 8, val])
+        writeReg(0x10, [val >> 16, val >> 8, val])
+        val += 128
+        sleep(0.1)
+    while val > 0:
+        print "Register 1:", readReg(1)
+        writeReg(0x00, [val >> 16, val >> 8, val])
+        writeReg(0x10, [val >> 16, val >> 8, val])
+        val -= 128
+        sleep(0.1)
