@@ -4,7 +4,7 @@ import RPi.GPIO as GPIO
 
 
 
-class TMC426():
+class TMC429():
 
     def __init__(self, spiDev, spiCh):
         spi = spidev.SpiDev()

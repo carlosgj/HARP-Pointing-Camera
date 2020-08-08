@@ -84,6 +84,10 @@ class TMC2130():
     def getStandstill(self):
         return self.spiStatus&1 == 1
         
+    def getVersion(self):
+        ioin = self.readReg(self.IOIN)
+        return (ioin >> 24) & 255
+        
     def readAll(self)
         res = {}
         for addr in self.READABLE:
