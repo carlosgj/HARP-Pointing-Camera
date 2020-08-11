@@ -11446,6 +11446,12 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <part name="TP5" library="testpad" deviceset="PTR1" device="B1,27" value="PTR1B1,27"/>
 <part name="TP6" library="testpad" deviceset="PTR1" device="B1,27" value="PTR1B1,27"/>
 <part name="TP7" library="testpad" deviceset="PTR1" device="B1,27" value="PTR1B1,27"/>
+<part name="TP8" library="testpad" deviceset="PTR1" device="PAD1-13"/>
+<part name="TP9" library="testpad" deviceset="PTR1" device="PAD1-13"/>
+<part name="TP10" library="testpad" deviceset="PTR1" device="PAD1-13"/>
+<part name="TP11" library="testpad" deviceset="PTR1" device="PAD1-13"/>
+<part name="TP12" library="testpad" deviceset="PTR1" device="PAD1-13"/>
+<part name="TP13" library="testpad" deviceset="PTR1" device="PAD1-13"/>
 </parts>
 <sheets>
 <sheet>
@@ -11553,6 +11559,12 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <instance part="TP5" gate="G$1" x="-142.24" y="-48.26" rot="R270"/>
 <instance part="TP6" gate="G$1" x="-142.24" y="-45.72" rot="R270"/>
 <instance part="TP7" gate="G$1" x="58.42" y="-93.98" rot="R180"/>
+<instance part="TP8" gate="G$1" x="91.44" y="142.24" rot="R270"/>
+<instance part="TP9" gate="G$1" x="91.44" y="137.16" rot="R270"/>
+<instance part="TP10" gate="G$1" x="106.68" y="177.8" rot="R180"/>
+<instance part="TP11" gate="G$1" x="73.66" y="170.18" rot="R180"/>
+<instance part="TP12" gate="G$1" x="132.08" y="78.74" rot="R90"/>
+<instance part="TP13" gate="G$1" x="132.08" y="22.86" rot="R90"/>
 </instances>
 <busses>
 </busses>
@@ -12412,6 +12424,42 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <segment>
 <pinref part="IC6" gate="G$1" pin="!DRDY"/>
 <pinref part="TP6" gate="G$1" pin="TP"/>
+</segment>
+</net>
+<net name="N$21" class="0">
+<segment>
+<pinref part="U$1" gate="G$1" pin="PSCMP"/>
+<pinref part="TP8" gate="G$1" pin="TP"/>
+</segment>
+</net>
+<net name="N$25" class="0">
+<segment>
+<pinref part="U$1" gate="G$1" pin="!INT"/>
+<pinref part="TP9" gate="G$1" pin="TP"/>
+</segment>
+</net>
+<net name="N$26" class="0">
+<segment>
+<pinref part="U$1" gate="G$1" pin="5V"/>
+<pinref part="TP10" gate="G$1" pin="TP"/>
+</segment>
+</net>
+<net name="N$27" class="0">
+<segment>
+<pinref part="Q1" gate="G$1" pin="OE"/>
+<pinref part="TP11" gate="G$1" pin="TP"/>
+</segment>
+</net>
+<net name="N$28" class="0">
+<segment>
+<pinref part="DRV2" gate="G$1" pin="VREF"/>
+<pinref part="TP12" gate="G$1" pin="TP"/>
+</segment>
+</net>
+<net name="N$29" class="0">
+<segment>
+<pinref part="DRV1" gate="G$1" pin="VREF"/>
+<pinref part="TP13" gate="G$1" pin="TP"/>
 </segment>
 </net>
 </nets>
