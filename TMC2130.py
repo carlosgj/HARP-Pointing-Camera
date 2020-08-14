@@ -36,6 +36,7 @@ class TMC2130():
     
     READABLE = [self.GCONF, self.GSTAT, self.IOIN, self.TSTEP, self.XDIRECT, self.MSCNT, self.MSCURACT, self.CHOPCONF, self.DRV_STATUS, self.PWM_SCALE, self.LOST_STEPS]
     
+    shadowregs = [0]*255
 
     def __init__(self, spiDev, spiCh):
         spi = spidev.SpiDev()
@@ -58,10 +59,14 @@ class TMC2130():
     def writeReg(addr, data):
         addr |= 0b10000000
         if isinstance(data, int):
+            intData = data
             data = [ (data >> 24)&0xff, (data >> 16)&0xff, (data >> 8)&0xff, data&0xff ]
+        else:
+            intData = (data[0]<<24) + (data[1]<<16) + (data[2]<<8) + data[3] 
         print "Writing %s to 0x%02x"%(', '.join(["0x%02x"%x for x in data]), addr)
         res = spi.xfer2([addr] + data)
         self.spiStatus = res[0]
+        self.shadowregs[addr] = intData 
     
     def readReg(addr):
         addr &= 0b01111111
