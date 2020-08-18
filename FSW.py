@@ -12,7 +12,9 @@ import CommunicationManager
 SERIAL_PORT = "COM4"
 BAUD = 115200
 
-states = Eunm('State', "IDLE HOMING READY MOVING COLLECTING")
+datadir = ""
+
+states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 
 motor1 = TMC2130.TMC2130(0, 0)
 motor2 = TMC2130.TMC2130(0, 1)
@@ -83,21 +85,29 @@ def executeCommand(opcode, date):
             #invalid opcode 
             resp = self.hdlc.createPacket(CTD.RES_IMP, [])
             self.ser.write(resp)
+            
+def initialize():
+    motor1.initialize()
+    motor2.initialize()
+    mc.initialize()
 
-while True:
-    #Main loop
-    #Check to see if we got any commands
-    (opcode, data) = cm.run()
-    if opcode is not None:
-        executeCommand(opcode, data)
-    
-    #Service motors
-    motor1.run()
-    motor2.run()
-    mc.run()
-    
-    #Service camera
+def run():
+    loopcount = 0
+    while True:
+        #Main loop
+        #Check to see if we got any commands
+        (opcode, data) = cm.run()
+        if opcode is not None:
+            executeCommand(opcode, data)
+        
+        #Service motors
+        motor1.run()
+        motor2.run()
+        mc.run()
+        
+        #Service camera
                 
+        loopcount += 1
                 
 if __name__ == "__main__":
     this = CommunicationManager()

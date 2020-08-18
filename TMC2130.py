@@ -1,4 +1,8 @@
-import spidev
+DEBUG = True
+
+if not DEBUG:
+    import spidev
+
 from time import sleep
 
 class TMC2130():
@@ -34,16 +38,17 @@ class TMC2130():
     ENCM_CTRL   = 0x72
     LOST_STEPS  = 0x73
     
-    READABLE = [self.GCONF, self.GSTAT, self.IOIN, self.TSTEP, self.XDIRECT, self.MSCNT, self.MSCURACT, self.CHOPCONF, self.DRV_STATUS, self.PWM_SCALE, self.LOST_STEPS]
+    READABLE = [GCONF, GSTAT, IOIN, TSTEP, XDIRECT, MSCNT, MSCURACT, CHOPCONF, DRV_STATUS, PWM_SCALE, LOST_STEPS]
     
     shadowregs = [0]*255
 
     def __init__(self, spiDev, spiCh):
-        spi = spidev.SpiDev()
-        spi.open(spiDev, spiCh)
-        spi0.max_speed_hz = 100000
-        spi0.mode = 3
-        spi0.no_cs = False
+        if not DEBUG:
+            self.spi = spidev.SpiDev()
+            self.spi.open(spiDev, spiCh)
+            self.spi.max_speed_hz = 100000
+            self.spi.mode = 3
+            self.spi.no_cs = False
         self.spiStatus = 0
 
     def initialize(self):
@@ -64,7 +69,10 @@ class TMC2130():
         else:
             intData = (data[0]<<24) + (data[1]<<16) + (data[2]<<8) + data[3] 
         print "Writing %s to 0x%02x"%(', '.join(["0x%02x"%x for x in data]), addr)
-        res = spi.xfer2([addr] + data)
+        if not DEBUG:
+            res = spi.xfer2([addr] + data)
+        else:
+            res = [0, 0, 0, 0]
         self.spiStatus = res[0]
         self.shadowregs[addr] = intData 
     
@@ -73,7 +81,10 @@ class TMC2130():
         #Dummy read to set address
         print "Sending [0x%02x, 0, 0, 0]"%addr
         spi.xfer2([addr, 0, 0, 0, 0])
-        res = spi.xfer2([addr, 0, 0, 0, 0])
+        if not debug:
+            res = spi.xfer2([addr, 0, 0, 0, 0])
+        else:
+            res = [0,0,0,0]
         self.spiStatus = res[0]
         return (res[1] << 24) | (res[2] << 16) | (res[3] << 8) | (res[4])
         
@@ -93,8 +104,11 @@ class TMC2130():
         ioin = self.readReg(self.IOIN)
         return (ioin >> 24) & 255
         
-    def readAll(self)
+    def readAll(self):
         res = {}
         for addr in self.READABLE:
             res[addr] = self.readReg(addr)
         return res
+        
+    def run(self):
+        pass
