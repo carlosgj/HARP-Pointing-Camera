@@ -9,11 +9,6 @@ import TMC2130
 import TMC429
 import CommunicationManager
 
-SERIAL_PORT = "COM4"
-BAUD = 115200
-
-datadir = ""
-
 states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 
 motor1 = TMC2130.TMC2130(0, 0)
