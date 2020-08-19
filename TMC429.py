@@ -106,11 +106,68 @@ class TMC429():
     def getEQT1(self):
         return self.spiStatus&1 == 1
         
+    def getSwitch(self, motor):
+        readReg(motor | self.ACTUAL) #Make sure spiStatus is updated
+        if motor == self.MOTOR1:
+            return self.getRS1()
+        elif motor == self.MOTOR2:
+            return self.getRS2()
+        elif motor == self.MOTOR3:
+            return self.getRS3()
+        else:
+            #Bad input
+            return None
+            
+    def getOnTarget(self, motor):
+        readReg(motor | self.ACTUAL) #Make sure spiStatus is updated
+        if motor == self.MOTOR1:
+            return self.getEQT1()
+        elif motor == self.MOTOR2:
+            return self.getEQT2()
+        elif motor == self.MOTOR3:
+            return self.getEQT3()
+        else:
+            #Bad input
+            return None
+        
     def run(self):
         pass
         
-    def home(self):
-        pass
+    def home(self, motor):
+        print "Homing..."
+        #Get current switch state
+        switch = self.getSwitch(motor)
+            
+        if switch:
+            print "Switch started triggered. Moving off..."
+            currentPos = readReg(motor | self.ACTUAL)
+            print "Current position:", currentPos
+            #Go forward some
+            newPos = currentPos + 512
+            writeReg(motor | self.TARGET, newPos)
+            sleep(1)
+            print "Current position:", readReg(motor | self.ACTUAL)
+            #Recheck switch
+            switch = self.getSwitch(motor)
+            print "Switch is now", switch
+        if not switch:
+            #Assume we're at full-right position
+            writeReg(motor | self.ACTUAL, 0x7fffff)
+            #Prime X_Latched
+            writeReg(motor | self.LATCHED, 0)
+            #Head towards 0
+            writeReg(motor | self.TARGET, 0)
+            while not switch:
+                switch = self.getSwitch(motor)
+            print "Hit switch..."
+            trigPos = readReg(motor | self.LATCHED)
+            print "Triggered at", trigPos
+            #Go to trigger position
+            writeReg(motor | self.TARGET, trigPos)
+            while not self.getOnTarget(motor):
+                pass
+            #set to 0
+            writeReg(motor | self.ACTUAL, 0)
 
 
 
