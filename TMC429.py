@@ -1,11 +1,18 @@
 DEBUG = True
 
+import logging
 if not DEBUG:
     import spidev
-    
 from time import sleep
 
 
+class SharedInfo():
+    def __init__(self):
+        isMoving = False
+        isHoming = False
+        isHomed = False
+        terminate = False
+    
 
 
 class TMC429():
@@ -59,7 +66,7 @@ class TMC429():
     IFCONFIG_POSCOMP1   = 128
     IFCONFIG_ENREFR     = 256
 
-    def __init__(self, spiDev, spiCh):
+    def __init__(self, info, spiDev, spiCh):
         if not DEBUG:
             self.spi = spidev.SpiDev()
             self.spi.open(spiDev, spiCh)
@@ -67,6 +74,10 @@ class TMC429():
             self.spi.mode = 3
             self.spi.no_cs = False
         self.spiStatus = 0
+        self.info = info
+        self.info.isMoving = False
+        self.info.isHoming = False
+        self.info.isHomed = False
         
     def initialize(self):
         #print writeReg(52,[0, 0, 0x20]) #Set en_sd
@@ -131,10 +142,14 @@ class TMC429():
             return None
         
     def run(self):
-        pass
+        
+        self.loopCounter += 1
         
     def home(self, motor):
         print "Homing..."
+        self.isHoming = True
+        self.isHomed = False
+        
         #Get current switch state
         switch = self.getSwitch(motor)
             

@@ -11,9 +11,11 @@ import CommunicationManager
 
 states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 
+mcInfo = TMC429.SharedInfo()
+
 motor1 = TMC2130.TMC2130(0, 0)
 motor2 = TMC2130.TMC2130(0, 1)
-mc = TMC429.TMC429(0, 2)
+mc = TMC429.TMC429(mcInfo, 0, 2)
 cm = CommunicationManager.CommunicationManager()
 
 def executeCommand(opcode, date):
