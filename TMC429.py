@@ -56,7 +56,7 @@ class TMC429():
     IFCONFIG_POSCOMP1   = 128
     IFCONFIG_ENREFR     = 256
 
-    def __init__(self, info, spiDev, spiCh):
+    def __init__(self, spiDev, spiCh, name="TMC429"):
         if not DEBUG:
             self.spi = spidev.SpiDev()
             self.spi.open(spiDev, spiCh)
@@ -64,7 +64,10 @@ class TMC429():
             self.spi.mode = 3
             self.spi.no_cs = False
         self.spiStatus = 0
-        self.info = info
+        self.logger = logging.getLogger(name)
+        self.STOP = False
+        self.loopCounter = 0
+        
         self.isMoving = False
         self.isHoming = False
         self.isHomed = False
@@ -79,22 +82,32 @@ class TMC429():
         #print writeReg(52,[0, 0, 0x20]) #Set en_sd
         self.writeReg(self.COMMON | self.IFCONFIG, self.IFCONFIG_ENSD)
 
-    def writeReg(addr, data):
+    def writeReg(self, addr, data):
         if isinstance(data, int):
             intData = data
             data = [ (data >> 16)&0xff, (data >> 8)&0xff, data&0xff ]
         else:
             intData = (data[0]<<16) + (data[1]<<8) + data[2] 
+        self.logger.debug("Sending 0x%0.6x to 0x%0.2x"%(intData, addr))
         addr = addr << 1
-        res = realXfer([addr]+data)
+        if not DEBUG:
+            res = self.spi.xfer2([addr]+data)
+        else:
+            res = [0, 0, 0, 0]
         self.spiStatus = res[0]
 
-    def readReg(addr):
+    def readReg(self, addr):
+        origAddr = addr
         addr = addr << 1
         addr |= 1
-        res = realXfer([addr, 0, 0, 0])
+        if not DEBUG:
+            res = self.spi.xfer2([addr, 0, 0, 0])
+        else:
+            res = [0, 0, 0, 0]
         self.spiStatus = res[0]
-        return (res[1]<<16) + (res[2]<<8) + (res[3])
+        val = (res[1]<<16) + (res[2]<<8) + (res[3])
+        self.logger.debug("0x%0.2x is 0x%0.6x. SPI status is 0x%0.2x."%(origAddr, val, self.spiStatus))
+        return val
         
     def getInt(self):
         return (self.spiStatus>>7)&1 == 1
@@ -114,11 +127,11 @@ class TMC429():
         return self.spiStatus&1 == 1
         
     def setVMin(self, motor, vmin):
-        writeReg(motor | self.VMIN, vmin)
+        self.writeReg(motor | self.VMIN, vmin)
     def setVMax(self, motor, vmax):
-        writeReg(motor | self.VMAX, vmax)
+        self.writeReg(motor | self.VMAX, vmax)
     def setAMax(self, motor, amax):
-        writeReg(motor | self.AMAX, amax)
+        self.writeReg(motor | self.AMAX, amax)
         
     def getSwitch(self, motor):
         readReg(motor | self.ACTUAL) #Make sure spiStatus is updated
@@ -145,18 +158,23 @@ class TMC429():
             return None
         
     def run(self):
-        self.m1pos = self.readReg(self.MOTOR1 | self.ACTUAL)
-        self.m2pos = self.readReg(self.MOTOR2 | self.ACTUAL)
-        self.m3pos = self.readReg(self.MOTOR3 | self.ACTUAL)
-        self.m1OnTarget = self.getEQT1()
-        self.m2OnTarget = self.getEQT2()
-        self.m3OnTarget = self.getEQT3()
-        if self.isHoming:
-            self.home()
-        self.loopCounter += 1
+        while True:
+            self.m1pos = self.readReg(self.MOTOR1 | self.ACTUAL)
+            self.m2pos = self.readReg(self.MOTOR2 | self.ACTUAL)
+            self.m3pos = self.readReg(self.MOTOR3 | self.ACTUAL)
+            self.m1OnTarget = self.getEQT1()
+            self.m2OnTarget = self.getEQT2()
+            self.m3OnTarget = self.getEQT3()
+            if self.isHoming:
+                self.home()
+            if self.STOP:
+                self.logger.critical("Received STOP signal")
+                break
+            self.loopCounter += 1
+            sleep(0.1)
         
     def home(self, motor):
-        print "Homing..."
+        self.logger.info("Homing...")
         self.isHoming = True
         self.isHomed = False
         
@@ -164,17 +182,17 @@ class TMC429():
         switch = self.getSwitch(motor)
             
         if switch:
-            print "Switch started triggered. Moving off..."
+            self.logger.debug("Switch started triggered. Moving off...")
             currentPos = readReg(motor | self.ACTUAL)
-            print "Current position:", currentPos
+            self.logger.debug("Current position:", currentPos)
             #Go forward some
             newPos = currentPos + 512
             writeReg(motor | self.TARGET, newPos)
             sleep(0.5)
-            print "Current position:", readReg(motor | self.ACTUAL)
+            self.logger.debug("Current position:", readReg(motor | self.ACTUAL))
             #Recheck switch
             switch = self.getSwitch(motor)
-            print "Switch is now", switch
+            self.logger.debug("Switch is now %r"%switch)
         if not switch:
             #Get current position to calculate error
             currentPos = readReg(motor | self.ACTUAL)
@@ -187,9 +205,9 @@ class TMC429():
             while not switch:
                 switch = self.getSwitch(motor)
                 sleep(0.1)
-            print "Hit switch..."
+            self.logger.debug("Hit switch...")
             trigPos = readReg(motor | self.LATCHED)
-            print "Triggered at", trigPos
+            self.logger.debug("Triggered at %d"%trigPos)
             #Go to trigger position
             writeReg(motor | self.TARGET, trigPos)
             while not self.getOnTarget(motor):
@@ -197,7 +215,7 @@ class TMC429():
             #set to 0
             writeReg(motor | self.ACTUAL, 0)
             homingError = (0x7fffff - trigPos) - currentPos
-            print "Homing error:", homingError
+            self.logger.info("Homing error: %d"%homingError)
             self.isHomed = True
             self.isHoming = False
 

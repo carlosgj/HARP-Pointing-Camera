@@ -1,14 +1,22 @@
-from CTD import opcodes
+import CTD
 from HDLC import SICHDLC
 import serial
 
-ser = serial.Serial('COM7', 115200, timeout=1)
+ser = serial.Serial('COM13', 115200, timeout=1)
 hdlc = SICHDLC(debug=True)
+
+opcodes = {}
+for key, val in CTD.__dict__.iteritems():
+    if key.startswith("OP_"):
+        opcodes[key] = val
+
+for key in opcodes.keys():
+    print key
 
 while True:
     try:
         cmd = raw_input("cmd>")
-        cmd = cmd.lower()
+        cmd = cmd.upper()
         if cmd in opcodes:
             oc = opcodes[cmd]
             packet = hdlc.createPacket(oc, [])

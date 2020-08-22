@@ -1,6 +1,5 @@
 import HDLC
 import time
-import serial
 import CTD
 import struct
 import psutil
@@ -9,25 +8,28 @@ import TMC2130
 import TMC429
 import CommunicationManager
 from threading import Thread
+import logging
+logger = logging.getLogger("ROOT")
+logging.basicConfig(level=logging.DEBUG)
+
 
 states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 
-mcInfo = TMC429.SharedInfo()
-
-motor1 = TMC2130.TMC2130(0, 0)
-motor2 = TMC2130.TMC2130(0, 1)
-mc = TMC429.TMC429(mcInfo, 0, 2)
+motor1 = TMC2130.TMC2130(0, 0, name="MOTOR1")
+motor2 = TMC2130.TMC2130(0, 1, name="MOTOR2")
+mc = TMC429.TMC429(0, 2, name="MOTCON")
 cm = CommunicationManager.CommunicationManager()
 
+m1Thread = Thread(target=motor1.run)
+m2Thread = Thread(target=motor2.run)
 mcThread = Thread(target=mc.run)
 cmThread = Thread(target=cm.run)
 
 def executeCommand(opcode, date):
         #Commands
         if opcode == CTD.OP_NOOP:
-            print "Got NOOP, sending ACK"
-            resp = self.hdlc.createPacket(CTD.RES_ACK, [])
-            self.ser.write(resp)
+            logger.info("Got NOOP, sending ACK")
+            cm.responseQueue.put((CTD.RES_ACK, []))
         elif opcode == CTD.OP_RST:
             #TODO: figure out how to reset 
             pass
@@ -100,19 +102,39 @@ def initialize():
     mc.setAMax(mc.MOTOR2, 20)
 
 def run():
-    loopcount = 0
-    cmThread.start()
-    mcThread.start()
-    while True:
-        #Main loop
-        #Check to see if we got any commands
-        if not cm.commandQueue.empty():
-            (opcode, data) = cm.commandQueue.get()
-            executeCommand(opcode, data)
+    try:
+        loopcount = 0
         
-        #Service camera
-                
-        loopcount += 1
+        logger.critical("Starting communications manager")
+        cmThread.start()
+        
+        logger.critical("Starting motor controller")
+        mcThread.start()
+        
+        logger.critical("Starting motor driver 1")
+        m1Thread.start()
+        
+        logger.critical("Starting motor driver 2")
+        m2Thread.start()
+        while True:
+            #Main loop
+            if loopcount % 10 == 0:
+                logger.debug("Loop %d"%loopcount)
+            #Check to see if we got any commands
+            if not cm.commandQueue.empty():
+                (opcode, data) = cm.commandQueue.get()
+                executeCommand(opcode, data)
+            else:
+                time.sleep(0.1)
+                    
+            loopcount += 1
+    except:
+        motor1.STOP = True
+        motor2.STOP = True
+        mc.STOP = True
+        cm.STOP = True
+        time.sleep(0.5)
+        raise
                 
 if __name__ == "__main__":
     initialize()

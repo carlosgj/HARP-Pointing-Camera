@@ -1,5 +1,6 @@
 DEBUG = True
 
+import logging
 if not DEBUG:
     import spidev
 
@@ -42,7 +43,7 @@ class TMC2130():
     
     shadowregs = [0]*255
 
-    def __init__(self, spiDev, spiCh):
+    def __init__(self, spiDev, spiCh, name="TMC2130"):
         if not DEBUG:
             self.spi = spidev.SpiDev()
             self.spi.open(spiDev, spiCh)
@@ -50,6 +51,8 @@ class TMC2130():
             self.spi.mode = 3
             self.spi.no_cs = False
         self.spiStatus = 0
+        self.logger = logging.getLogger(name)
+        self.STOP = False
 
     def initialize(self):
         #res = spi.xfer2([0x01, 0x00, 0x00, 0x00, 0x00])
@@ -61,30 +64,30 @@ class TMC2130():
         #res = spi.xfer2([0xec, 0x32, 0x02, 0x80, 0x08])
         self.writeReg(self.CHOPCONF, 0x32028080)
         
-    def writeReg(addr, data):
+    def writeReg(self, addr, data):
         addr |= 0b10000000
         if isinstance(data, int):
             intData = data
             data = [ (data >> 24)&0xff, (data >> 16)&0xff, (data >> 8)&0xff, data&0xff ]
         else:
             intData = (data[0]<<24) + (data[1]<<16) + (data[2]<<8) + data[3] 
-        print "Writing %s to 0x%02x"%(', '.join(["0x%02x"%x for x in data]), addr)
+        self.logger.debug("Writing %s to 0x%02x"%(', '.join(["0x%02x"%x for x in data]), addr))
         if not DEBUG:
             res = spi.xfer2([addr] + data)
         else:
-            res = [0, 0, 0, 0]
+            res = [0, 0, 0, 0, 0]
         self.spiStatus = res[0]
         self.shadowregs[addr] = intData 
     
-    def readReg(addr):
+    def readReg(self, addr):
         addr &= 0b01111111
         #Dummy read to set address
-        print "Sending [0x%02x, 0, 0, 0]"%addr
-        spi.xfer2([addr, 0, 0, 0, 0])
-        if not debug:
-            res = spi.xfer2([addr, 0, 0, 0, 0])
+        self.logger.debug("Sending [0x%02x, 0, 0, 0]"%addr)
+        if not DEBUG:
+            self.spi.xfer2([addr, 0, 0, 0, 0])
+            res = self.spi.xfer2([addr, 0, 0, 0, 0])
         else:
-            res = [0,0,0,0]
+            res = [0,0,0,0, 0]
         self.spiStatus = res[0]
         return (res[1] << 24) | (res[2] << 16) | (res[3] << 8) | (res[4])
         
@@ -111,4 +114,9 @@ class TMC2130():
         return res
         
     def run(self):
-        pass
+        while True:
+            pass
+            sleep(0.1)
+            if self.STOP:
+                self.logger.critical("Received STOP signal")
+                break
