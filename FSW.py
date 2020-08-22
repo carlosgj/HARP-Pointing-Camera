@@ -8,6 +8,7 @@ from enum import Enum
 import TMC2130
 import TMC429
 import CommunicationManager
+from threading import Thread
 
 states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 
@@ -17,6 +18,9 @@ motor1 = TMC2130.TMC2130(0, 0)
 motor2 = TMC2130.TMC2130(0, 1)
 mc = TMC429.TMC429(mcInfo, 0, 2)
 cm = CommunicationManager.CommunicationManager()
+
+mcThread = Thread(target=mc.run)
+cmThread = Thread(target=cm.run)
 
 def executeCommand(opcode, date):
         #Commands
@@ -86,26 +90,30 @@ def executeCommand(opcode, date):
 def initialize():
     motor1.initialize()
     motor2.initialize()
+    
     mc.initialize()
+    mc.setVMin(mc.MOTOR1, 1)
+    mc.setVMax(mc.MOTOR1, 30)
+    mc.setAMax(mc.MOTOR1, 20)
+    mc.setVMin(mc.MOTOR2, 1)
+    mc.setVMax(mc.MOTOR2, 30)
+    mc.setAMax(mc.MOTOR2, 20)
 
 def run():
     loopcount = 0
+    cmThread.start()
+    mcThread.start()
     while True:
         #Main loop
         #Check to see if we got any commands
-        (opcode, data) = cm.run()
-        if opcode is not None:
+        if not cm.commandQueue.empty():
+            (opcode, data) = cm.commandQueue.get()
             executeCommand(opcode, data)
-        
-        #Service motors
-        motor1.run()
-        motor2.run()
-        mc.run()
         
         #Service camera
                 
         loopcount += 1
                 
 if __name__ == "__main__":
-    this = CommunicationManager()
-    this.run()
+    initialize()
+    run()

@@ -5,22 +5,6 @@ if not DEBUG:
     import spidev
 from time import sleep
 
-
-class SharedInfo():
-    def __init__(self):
-        isMoving = False
-        isHoming = False
-        isHomed = False
-        terminate = False
-        m1pos = None
-        m2pos = None
-        m3pos = None
-        m1OnTarget = False
-        m2OnTarget = False
-        m3OnTarget = False
-    
-
-
 class TMC429():
 
     MOTOR1 = 0
@@ -81,9 +65,15 @@ class TMC429():
             self.spi.no_cs = False
         self.spiStatus = 0
         self.info = info
-        self.info.isMoving = False
-        self.info.isHoming = False
-        self.info.isHomed = False
+        self.isMoving = False
+        self.isHoming = False
+        self.isHomed = False
+        self.m1pos = None
+        self.m2pos = None
+        self.m3pos = None
+        self.m1OnTarget = False
+        self.m2OnTarget = False
+        self.m3OnTarget = False
         
     def initialize(self):
         #print writeReg(52,[0, 0, 0x20]) #Set en_sd
@@ -123,6 +113,13 @@ class TMC429():
     def getEQT1(self):
         return self.spiStatus&1 == 1
         
+    def setVMin(self, motor, vmin):
+        writeReg(motor | self.VMIN, vmin)
+    def setVMax(self, motor, vmax):
+        writeReg(motor | self.VMAX, vmax)
+    def setAMax(self, motor, amax):
+        writeReg(motor | self.AMAX, amax)
+        
     def getSwitch(self, motor):
         readReg(motor | self.ACTUAL) #Make sure spiStatus is updated
         if motor == self.MOTOR1:
@@ -148,13 +145,13 @@ class TMC429():
             return None
         
     def run(self):
-        self.info.m1pos = self.readReg(self.MOTOR1 | self.ACTUAL)
-        self.info.m2pos = self.readReg(self.MOTOR2 | self.ACTUAL)
-        self.info.m3pos = self.readReg(self.MOTOR3 | self.ACTUAL)
-        self.info.m1OnTarget = self.getEQT1()
-        self.info.m2OnTarget = self.getEQT2()
-        self.info.m3OnTarget = self.getEQT3()
-        if self.info.isHoming:
+        self.m1pos = self.readReg(self.MOTOR1 | self.ACTUAL)
+        self.m2pos = self.readReg(self.MOTOR2 | self.ACTUAL)
+        self.m3pos = self.readReg(self.MOTOR3 | self.ACTUAL)
+        self.m1OnTarget = self.getEQT1()
+        self.m2OnTarget = self.getEQT2()
+        self.m3OnTarget = self.getEQT3()
+        if self.isHoming:
             self.home()
         self.loopCounter += 1
         
