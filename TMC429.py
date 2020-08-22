@@ -12,6 +12,12 @@ class SharedInfo():
         isHoming = False
         isHomed = False
         terminate = False
+        m1pos = None
+        m2pos = None
+        m3pos = None
+        m1OnTarget = False
+        m2OnTarget = False
+        m3OnTarget = False
     
 
 
@@ -142,7 +148,14 @@ class TMC429():
             return None
         
     def run(self):
-        
+        self.info.m1pos = self.readReg(self.MOTOR1 | self.ACTUAL)
+        self.info.m2pos = self.readReg(self.MOTOR2 | self.ACTUAL)
+        self.info.m3pos = self.readReg(self.MOTOR3 | self.ACTUAL)
+        self.info.m1OnTarget = self.getEQT1()
+        self.info.m2OnTarget = self.getEQT2()
+        self.info.m3OnTarget = self.getEQT3()
+        if self.info.isHoming:
+            self.home()
         self.loopCounter += 1
         
     def home(self, motor):
@@ -160,12 +173,14 @@ class TMC429():
             #Go forward some
             newPos = currentPos + 512
             writeReg(motor | self.TARGET, newPos)
-            sleep(1)
+            sleep(0.5)
             print "Current position:", readReg(motor | self.ACTUAL)
             #Recheck switch
             switch = self.getSwitch(motor)
             print "Switch is now", switch
         if not switch:
+            #Get current position to calculate error
+            currentPos = readReg(motor | self.ACTUAL)
             #Assume we're at full-right position
             writeReg(motor | self.ACTUAL, 0x7fffff)
             #Prime X_Latched
@@ -174,15 +189,20 @@ class TMC429():
             writeReg(motor | self.TARGET, 0)
             while not switch:
                 switch = self.getSwitch(motor)
+                sleep(0.1)
             print "Hit switch..."
             trigPos = readReg(motor | self.LATCHED)
             print "Triggered at", trigPos
             #Go to trigger position
             writeReg(motor | self.TARGET, trigPos)
             while not self.getOnTarget(motor):
-                pass
+                sleep(0.1)
             #set to 0
             writeReg(motor | self.ACTUAL, 0)
+            homingError = (0x7fffff - trigPos) - currentPos
+            print "Homing error:", homingError
+            self.isHomed = True
+            self.isHoming = False
 
 
 
