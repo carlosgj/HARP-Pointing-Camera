@@ -2956,8 +2956,13 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="R3" pad="2"/>
 <wire x1="51.587" y1="22.86" x2="61.595" y2="22.86" width="0.3048" layer="16"/>
 </signal>
-<signal name="N$31">
+<signal name="CS3">
 <contactref element="U$1" pad="P$4"/>
+<contactref element="J1" pad="40"/>
+<wire x1="39.37" y1="3.81" x2="39.37" y2="5.08" width="0.3048" layer="1"/>
+<wire x1="39.37" y1="5.08" x2="34.29" y2="10.16" width="0.3048" layer="1"/>
+<wire x1="34.29" y1="10.16" x2="29.845" y2="10.16" width="0.3048" layer="1"/>
+<wire x1="29.845" y1="10.16" x2="27.94" y2="8.255" width="0.3048" layer="1"/>
 </signal>
 <signal name="VMOT">
 <contactref element="DRV1" pad="P$9"/>

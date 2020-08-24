@@ -12356,11 +12356,16 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <wire x1="-104.14" y1="83.82" x2="-104.14" y2="78.74" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$31" class="0">
+<net name="CS3" class="0">
 <segment>
 <pinref part="U$1" gate="G$1" pin="!CS"/>
 <wire x1="93.98" y1="154.94" x2="88.9" y2="154.94" width="0.1524" layer="91"/>
 <label x="88.9" y="154.94" size="1.778" layer="95" rot="R180"/>
+</segment>
+<segment>
+<pinref part="J1" gate="G$1" pin="GP21"/>
+<wire x1="12.7" y1="43.18" x2="7.62" y2="43.18" width="0.1524" layer="91"/>
+<label x="7.62" y="43.18" size="1.778" layer="95" rot="R180"/>
 </segment>
 </net>
 <net name="VMOT" class="0">
