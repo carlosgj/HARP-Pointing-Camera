@@ -73,7 +73,7 @@ class TMC2130():
             intData = (data[0]<<24) + (data[1]<<16) + (data[2]<<8) + data[3] 
         self.logger.debug("Writing %s to 0x%02x"%(', '.join(["0x%02x"%x for x in data]), addr))
         if not DEBUG:
-            res = spi.xfer2([addr] + data)
+            res = self.spi.xfer2([addr] + data)
         else:
             res = [0, 0, 0, 0, 0]
         self.spiStatus = res[0]
