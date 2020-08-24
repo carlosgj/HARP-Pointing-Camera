@@ -11452,6 +11452,8 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <part name="TP11" library="testpad" deviceset="PTR1" device="PAD1-13"/>
 <part name="TP12" library="testpad" deviceset="PTR1" device="PAD1-13"/>
 <part name="TP13" library="testpad" deviceset="PTR1" device="PAD1-13"/>
+<part name="TP14" library="testpad" deviceset="PTR1" device="PAD1-13"/>
+<part name="TP15" library="testpad" deviceset="PTR1" device="PAD1-13"/>
 </parts>
 <sheets>
 <sheet>
@@ -11565,6 +11567,8 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <instance part="TP11" gate="G$1" x="73.66" y="170.18" rot="R180"/>
 <instance part="TP12" gate="G$1" x="132.08" y="78.74" rot="R90"/>
 <instance part="TP13" gate="G$1" x="132.08" y="22.86" rot="R90"/>
+<instance part="TP14" gate="G$1" x="127" y="-78.74" rot="R180"/>
+<instance part="TP15" gate="G$1" x="129.54" y="-81.28" rot="R180"/>
 </instances>
 <busses>
 </busses>
@@ -11835,6 +11839,7 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <segment>
 <pinref part="TP2" gate="G$1" pin="TP"/>
 <wire x1="-15.24" y1="68.58" x2="-17.78" y2="68.58" width="0.1524" layer="91"/>
+<label x="-17.78" y="68.58" size="1.778" layer="95" rot="R180"/>
 </segment>
 </net>
 <net name="MOSI" class="0">
@@ -11866,6 +11871,7 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <segment>
 <pinref part="TP3" gate="G$1" pin="TP"/>
 <wire x1="-15.24" y1="63.5" x2="-17.78" y2="63.5" width="0.1524" layer="91"/>
+<label x="-17.78" y="63.5" size="1.778" layer="95" rot="R180"/>
 </segment>
 </net>
 <net name="SCLK" class="0">
@@ -11897,6 +11903,7 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <segment>
 <pinref part="TP1" gate="G$1" pin="TP"/>
 <wire x1="-15.24" y1="73.66" x2="-17.78" y2="73.66" width="0.1524" layer="91"/>
+<label x="-17.78" y="73.66" size="1.778" layer="95" rot="R180"/>
 </segment>
 </net>
 <net name="CS0" class="0">
@@ -12073,16 +12080,22 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <segment>
 <pinref part="IC3" gate="G$1" pin="TX"/>
 <pinref part="IC4" gate="G$1" pin="DI"/>
-<wire x1="121.92" y1="-81.28" x2="134.62" y2="-81.28" width="0.1524" layer="91"/>
+<wire x1="121.92" y1="-81.28" x2="127" y2="-81.28" width="0.1524" layer="91"/>
+<wire x1="127" y1="-81.28" x2="134.62" y2="-81.28" width="0.1524" layer="91"/>
 <wire x1="134.62" y1="-81.28" x2="134.62" y2="-77.47" width="0.1524" layer="91"/>
+<pinref part="TP14" gate="G$1" pin="TP"/>
+<junction x="127" y="-81.28"/>
 </segment>
 </net>
 <net name="N$37" class="0">
 <segment>
 <pinref part="IC3" gate="G$1" pin="RX"/>
-<wire x1="121.92" y1="-83.82" x2="134.62" y2="-83.82" width="0.1524" layer="91"/>
+<wire x1="121.92" y1="-83.82" x2="129.54" y2="-83.82" width="0.1524" layer="91"/>
 <pinref part="IC4" gate="G$1" pin="RO"/>
+<wire x1="129.54" y1="-83.82" x2="134.62" y2="-83.82" width="0.1524" layer="91"/>
 <wire x1="134.62" y1="-83.82" x2="134.62" y2="-87.63" width="0.1524" layer="91"/>
+<pinref part="TP15" gate="G$1" pin="TP"/>
+<junction x="129.54" y="-83.82"/>
 </segment>
 </net>
 <net name="SCL" class="0">
