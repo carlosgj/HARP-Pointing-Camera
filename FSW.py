@@ -15,9 +15,9 @@ logging.basicConfig(level=logging.INFO)
 
 states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 
-motor1 = TMC2130.TMC2130(0, 0, name="MOTOR1")
-motor2 = TMC2130.TMC2130(0, 1, name="MOTOR2")
-mc = TMC429.TMC429(0, 2, name="MOTCON")
+motor1 = TMC2130.TMC2130(0, 1, name="MOTOR1")
+motor2 = TMC2130.TMC2130(0, 0, name="MOTOR2")
+mc = TMC429.TMC429(0, 3, name="MOTCON")
 cm = CommunicationManager.CommunicationManager()
 
 m1Thread = Thread(target=motor1.run)
