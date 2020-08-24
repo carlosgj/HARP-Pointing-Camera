@@ -68,15 +68,28 @@ class TMC429():
         self.STOP = False
         self.loopCounter = 0
         
-        self.isMoving = False
-        self.isHoming = False
-        self.isHomed = False
+        self.m1Homing = False
+        self.m2Homing = False
+        self.m3Homing = False
+        self.m1Homed = False
+        self.m2Homed = False
+        self.m3Homed = False
         self.m1pos = None
         self.m2pos = None
         self.m3pos = None
         self.m1OnTarget = False
         self.m2OnTarget = False
         self.m3OnTarget = False
+        
+    def motorName(self, motor):
+        if motor == self.MOTOR1:
+            return "MOTOR1"
+        elif motor == self.MOTOR2:
+            return "MOTOR2"
+        elif motor == self.MOTOR3:
+            return "MOTOR3"
+        else:
+            return "Invalid Motor"
         
     def initialize(self):
         #print writeReg(52,[0, 0, 0x20]) #Set en_sd
@@ -156,28 +169,41 @@ class TMC429():
         else:
             #Bad input
             return None
+            
+    def getVersion(self):
+        return self.readReg(self.COMMON | self.VERSION)
         
     def run(self):
         while True:
+            if self.STOP:
+                self.logger.critical("Received STOP signal")
+                break
             self.m1pos = self.readReg(self.MOTOR1 | self.ACTUAL)
             self.m2pos = self.readReg(self.MOTOR2 | self.ACTUAL)
             self.m3pos = self.readReg(self.MOTOR3 | self.ACTUAL)
             self.m1OnTarget = self.getEQT1()
             self.m2OnTarget = self.getEQT2()
             self.m3OnTarget = self.getEQT3()
-            if self.isHoming:
-                self.home()
-            if self.STOP:
-                self.logger.critical("Received STOP signal")
-                break
+            if self.m1Homing:
+                self.home(self.MOTOR1)
+            elif self.m2Homing:
+                self.home(self.MOTOR2)
+            elif self.m3Homing:
+                self.home(self.MOTOR3)
             self.loopCounter += 1
             sleep(0.1)
         
     def home(self, motor):
-        self.logger.info("Homing...")
-        self.isHoming = True
-        self.isHomed = False
-        
+        self.logger.info("Homing %s..."%self.motorName(motor))
+        if motor == self.MOTOR1:
+            self.m1Homing = True
+            self.m1Homed = False
+        elif motor == self.MOTOR2:
+            self.m2Homing = True
+            self.m2Homed = False
+        elif motor == self.MOTOR3:
+            self.m3Homing = True
+            self.m3Homed = False
         #Get current switch state
         switch = self.getSwitch(motor)
             
@@ -216,8 +242,15 @@ class TMC429():
             writeReg(motor | self.ACTUAL, 0)
             homingError = (0x7fffff - trigPos) - currentPos
             self.logger.info("Homing error: %d"%homingError)
-            self.isHomed = True
-            self.isHoming = False
+            if motor == self.MOTOR1:
+                self.m1Homing = False
+                self.m1Homed = True
+            elif motor == self.MOTOR2:
+                self.m2Homing = False
+                self.m2Homed = True
+            elif motor == self.MOTOR3:
+                self.m3Homing = False
+                self.m3Homed = True
 
 
 

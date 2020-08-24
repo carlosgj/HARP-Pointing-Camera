@@ -10,7 +10,7 @@ import CommunicationManager
 from threading import Thread
 import logging
 logger = logging.getLogger("ROOT")
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
@@ -31,10 +31,11 @@ def executeCommand(opcode, date):
             logger.info("Got NOOP, sending ACK")
             cm.responseQueue.put((CTD.RES_ACK, []))
         elif opcode == CTD.OP_RST:
-            #TODO: figure out how to reset 
+            #TODO: figure out how to reset Pi
             pass
         elif opcode == CTD.OP_HOME:
-            pass
+            mc.m1Homing = True
+            mc.m2Homing = True
         elif opcode == CTD.OP_PT:
             pass
         elif opcode == CTD.OP_COL:
@@ -89,14 +90,12 @@ def executeCommand(opcode, date):
             pass
         elif opcode == CTD.OP_QUT:
             uptime = int( time.time() - psutil.boot_time() )
-            print "Got QUT, sending %d (0x%08x)"%(uptime, uptime)
-            resp = self.hdlc.createPacket(CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', uptime)))
-            self.ser.write(resp)
+            logger.info("Got QUT, sending %d (0x%08x)"%(uptime, uptime))
+            cm.responseQueue.put( (CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', uptime))) )
         elif opcode == CTD.OP_QTIM:
             ctime = int(time.time())
-            print "Got QTIM, sending %d (0x%08x)"%(ctime, ctime)
-            resp = self.hdlc.createPacket(CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', ctime)))
-            self.ser.write(resp)
+            logger.info("Got QTIM, sending %d (0x%08x)"%(ctime, ctime))
+            cm.responseQueue.put( (CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', ctime))) )
         elif opcode == CTD.OP_QTMP:
             pass
 
