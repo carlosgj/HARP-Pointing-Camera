@@ -59,6 +59,22 @@ def executeCommand(opcode, date):
             pass
         elif opcode == CTD.OP_CRS:
             pass
+        elif opcode == CTD.OP_SCI:
+            pass
+        elif opcode == CTD.OP_SCG:
+            pass
+        elif opcode == CTD.OP_SCM:
+            pass
+        elif opcode == CTD.OP_SCS:
+            pass
+        elif opcode == CTD.OP_SCW:
+            pass
+        elif opcode == CTD.OP_SCF:
+            pass
+        elif opcode == CTD.OP_KCS:
+            pass
+        elif opcode == CTD.OP_KCX:
+            pass
         
         #Queries
         elif opcode == CTD.OP_QSTA:
