@@ -1,9 +1,5 @@
-DEBUG = True
-
 import logging
-if not DEBUG:
-    import spidev
-
+import spidev
 from time import sleep
 
 class TMC2130():
@@ -41,15 +37,14 @@ class TMC2130():
     
     READABLE = [GCONF, GSTAT, IOIN, TSTEP, XDIRECT, MSCNT, MSCURACT, CHOPCONF, DRV_STATUS, PWM_SCALE, LOST_STEPS]
     
-    shadowregs = [0]*255
+    shadowregs = [0]*0x72
 
     def __init__(self, spiDev, spiCh, name="TMC2130"):
-        if not DEBUG:
-            self.spi = spidev.SpiDev()
-            self.spi.open(spiDev, spiCh)
-            self.spi.max_speed_hz = 100000
-            self.spi.mode = 3
-            self.spi.no_cs = False
+        self.spi = spidev.SpiDev()
+        self.spi.open(spiDev, spiCh)
+        self.spi.max_speed_hz = 100000
+        self.spi.mode = 3
+        self.spi.no_cs = False
         self.spiStatus = 0
         self.logger = logging.getLogger(name)
         self.STOP = False
@@ -72,10 +67,7 @@ class TMC2130():
         else:
             intData = (data[0]<<24) + (data[1]<<16) + (data[2]<<8) + data[3] 
         self.logger.debug("Writing %s to 0x%02x"%(', '.join(["0x%02x"%x for x in data]), addr))
-        if not DEBUG:
-            res = self.spi.xfer2([addr] + data)
-        else:
-            res = [0, 0, 0, 0, 0]
+        res = self.spi.xfer2([addr] + data)
         self.spiStatus = res[0]
         self.shadowregs[addr] = intData 
     
@@ -83,11 +75,8 @@ class TMC2130():
         addr &= 0b01111111
         #Dummy read to set address
         self.logger.debug("Sending [0x%02x, 0, 0, 0]"%addr)
-        if not DEBUG:
-            self.spi.xfer2([addr, 0, 0, 0, 0])
-            res = self.spi.xfer2([addr, 0, 0, 0, 0])
-        else:
-            res = [0,0,0,0, 0]
+        self.spi.xfer2([addr, 0, 0, 0, 0])
+        res = self.spi.xfer2([addr, 0, 0, 0, 0])
         self.spiStatus = res[0]
         return (res[1] << 24) | (res[2] << 16) | (res[3] << 8) | (res[4])
         
@@ -115,7 +104,6 @@ class TMC2130():
         
     def run(self):
         while True:
-            pass
             sleep(0.1)
             if self.STOP:
                 self.logger.critical("Received STOP signal")

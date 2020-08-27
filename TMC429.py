@@ -1,8 +1,5 @@
-DEBUG = True
-
 import logging
-if not DEBUG:
-    import spidev
+import spidev
 from time import sleep
 
 class TMC429():
@@ -57,12 +54,11 @@ class TMC429():
     IFCONFIG_ENREFR     = 256
 
     def __init__(self, spiDev, spiCh, name="TMC429"):
-        if not DEBUG:
-            self.spi = spidev.SpiDev()
-            self.spi.open(spiDev, spiCh)
-            self.spi.max_speed_hz = 100000
-            self.spi.mode = 3
-            self.spi.no_cs = False
+        self.spi = spidev.SpiDev()
+        self.spi.open(spiDev, spiCh)
+        self.spi.max_speed_hz = 100000
+        self.spi.mode = 3
+        self.spi.no_cs = False
         self.spiStatus = 0
         self.logger = logging.getLogger(name)
         self.STOP = False
@@ -103,20 +99,14 @@ class TMC429():
             intData = (data[0]<<16) + (data[1]<<8) + data[2] 
         self.logger.debug("Sending 0x%0.6x to 0x%0.2x"%(intData, addr))
         addr = addr << 1
-        if not DEBUG:
-            res = self.spi.xfer2([addr]+data)
-        else:
-            res = [0, 0, 0, 0]
+        res = self.spi.xfer2([addr]+data)
         self.spiStatus = res[0]
 
     def readReg(self, addr):
         origAddr = addr
         addr = addr << 1
         addr |= 1
-        if not DEBUG:
-            res = self.spi.xfer2([addr, 0, 0, 0])
-        else:
-            res = [0, 0, 0, 0]
+        res = self.spi.xfer2([addr, 0, 0, 0])
         self.spiStatus = res[0]
         val = (res[1]<<16) + (res[2]<<8) + (res[3])
         self.logger.debug("0x%0.2x is 0x%0.6x. SPI status is 0x%0.2x."%(origAddr, val, self.spiStatus))
@@ -208,7 +198,7 @@ class TMC429():
         switch = self.getSwitch(motor)
             
         if switch:
-            self.logger.debug("Switch started triggered. Moving off...")
+            self.logger.info("Switch started triggered. Moving off...")
             currentPos = readReg(motor | self.ACTUAL)
             self.logger.debug("Current position:", currentPos)
             #Go forward some
@@ -231,7 +221,7 @@ class TMC429():
             while not switch:
                 switch = self.getSwitch(motor)
                 sleep(0.1)
-            self.logger.debug("Hit switch...")
+            self.logger.info("Hit switch...")
             trigPos = readReg(motor | self.LATCHED)
             self.logger.debug("Triggered at %d"%trigPos)
             #Go to trigger position
