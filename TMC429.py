@@ -1,5 +1,8 @@
 import logging
-import spidev
+try:
+    import spidev
+except ImportError:
+    import mockSpidev as spidev
 from time import sleep
 
 class TMC429():
@@ -52,8 +55,11 @@ class TMC429():
     IFCONFIG_POSCOMP0   = 64
     IFCONFIG_POSCOMP1   = 128
     IFCONFIG_ENREFR     = 256
+    
+    M1_BORESIGHT_MICROSTEPS = 0
+    M2_BORESIGHT_MICROSTEPS = 0
 
-    def __init__(self, spiDev, spiCh, name="TMC429"):
+    def __init__(self, spiDev, spiCh, name="TMC429", MRES=2, steps=200):
         self.spi = spidev.SpiDev()
         self.spi.open(spiDev, spiCh)
         self.spi.max_speed_hz = 100000
@@ -64,18 +70,21 @@ class TMC429():
         self.STOP = False
         self.loopCounter = 0
         
+        self.MRES = MRES
+        self.steps_per_rev = steps
+        self.microsteps_per_step = 256/(2**self.MRES)
+        self.microsteps_per_rev = self.microsteps_per_step * self.steps_per_rev
+        self.degrees_per_microstep = 360. / self.microsteps_per_rev
+        self.microsteps_per_degree = self.microsteps_per_rev / 360.
+        
         self.m1Homing = False
         self.m2Homing = False
-        self.m3Homing = False
         self.m1Homed = False
         self.m2Homed = False
-        self.m3Homed = False
         self.m1pos = None
         self.m2pos = None
-        self.m3pos = None
         self.m1OnTarget = False
         self.m2OnTarget = False
-        self.m3OnTarget = False
         
     def motorName(self, motor):
         if motor == self.MOTOR1:
@@ -88,6 +97,7 @@ class TMC429():
             return "Invalid Motor"
         
     def initialize(self):
+        """Initialize registers to common values"""
         #print writeReg(52,[0, 0, 0x20]) #Set en_sd
         self.writeReg(self.COMMON | self.IFCONFIG, self.IFCONFIG_ENSD)
 
@@ -129,15 +139,72 @@ class TMC429():
     def getEQT1(self):
         return self.spiStatus&1 == 1
         
+    def getTargetSteps(self, motor):
+        """Gets the target in uncorrected microsteps
+        i.e. the value of TARGET
+        """
+        return self.readReg(motor | self.TARGET)
+    
+    def getActualSteps(self, motor):
+        """Gets the position in uncorrected microsteps
+        i.e. the value of ACTUAL
+        """
+        return self.readReg(motor | self.ACTUAL)
+        
+    def getTargetDegrees(self, motor):
+        """Gets the target in degrees-off-boresight
+        """
+        if motor == self.MOTOR1:
+            return (self.getTargetSteps(motor) - self.M1_BORESIGHT_MICROSTEPS) * self.degrees_per_microstep
+        elif motor == self.MOTOR2:
+            return (self.getTargetSteps(motor) - self.M2_BORESIGHT_MICROSTEPS) * self.degrees_per_microstep
+            
+    def getActualDegrees(self, motor):
+        """Gets the current position in degrees-off-boresight
+        """
+        if motor == self.MOTOR1:
+            return (self.getActualSteps(motor) - self.M1_BORESIGHT_MICROSTEPS) * self.degrees_per_microstep
+        elif motor == self.MOTOR2:
+            return (self.getActualSteps(motor) - self.M2_BORESIGHT_MICROSTEPS) * self.degrees_per_microstep
+        
     def setVMin(self, motor, vmin):
+        """Sets minimum velocity parameter"""
         self.writeReg(motor | self.VMIN, vmin)
+
     def setVMax(self, motor, vmax):
+        """Sets maximum velocity parameter"""
         self.writeReg(motor | self.VMAX, vmax)
+
     def setAMax(self, motor, amax):
+        """Sets maximum acceleration parameter"""
         self.writeReg(motor | self.AMAX, amax)
         
+    def setTargetRawSteps(self, motor, target):
+        """Sets the target in raw steps (the value of TARGET)
+
+        This is uncorrected for reference switch location.
+        """
+        self.writeReg(motor | self.TARGET, target)
+    
+    def setTargetStepsCalibrated(self, motor, steps):
+        """Sets the target in microsteps-off-boresight
+        """
+        if motor == self.MOTOR1:
+            self.setTargetRawSteps(motor, steps - self.M1_BORESIGHT_MICROSTEPS)
+        elif motor == self.MOTOR2:
+            self.setTargetRawSteps(motor, steps - self.M2_BORESIGHT_MICROSTEPS)
+    
+    def setTargetDegrees(self, motor, degrees):
+        """Sets the target in degrees-off-boresight
+        """
+        self.setTargetStepsCalibrated(motor, degrees * self.microsteps_per_degree)
+        
     def getSwitch(self, motor):
-        readReg(motor | self.ACTUAL) #Make sure spiStatus is updated
+        """Returns the state of the limit switch
+
+        Left-side (default) limit switch/reference for the given motor
+        """
+        self.getActualSteps(motor) #Make sure spiStatus is updated
         if motor == self.MOTOR1:
             return self.getRS1()
         elif motor == self.MOTOR2:
@@ -147,9 +214,13 @@ class TMC429():
         else:
             #Bad input
             return None
-            
+    
     def getOnTarget(self, motor):
-        readReg(motor | self.ACTUAL) #Make sure spiStatus is updated
+        """Returns True if the given motor is on target
+
+        i.e. if ACTUAL == TARGET
+        """
+        self.getActualSteps(motor) #Make sure spiStatus is updated
         if motor == self.MOTOR1:
             return self.getEQT1()
         elif motor == self.MOTOR2:
@@ -161,6 +232,7 @@ class TMC429():
             return None
             
     def getVersion(self):
+        """Returns the value of the VERSION register"""
         return self.readReg(self.COMMON | self.VERSION)
         
     def run(self):
@@ -168,22 +240,21 @@ class TMC429():
             if self.STOP:
                 self.logger.critical("Received STOP signal")
                 break
-            self.m1pos = self.readReg(self.MOTOR1 | self.ACTUAL)
-            self.m2pos = self.readReg(self.MOTOR2 | self.ACTUAL)
-            self.m3pos = self.readReg(self.MOTOR3 | self.ACTUAL)
+            self.m1pos = self.getActualDegrees(self.MOTOR1)
+            self.m2pos = self.getActualDegrees(self.MOTOR1)
             self.m1OnTarget = self.getEQT1()
             self.m2OnTarget = self.getEQT2()
-            self.m3OnTarget = self.getEQT3()
             if self.m1Homing:
                 self.home(self.MOTOR1)
             elif self.m2Homing:
                 self.home(self.MOTOR2)
-            elif self.m3Homing:
-                self.home(self.MOTOR3)
             self.loopCounter += 1
             sleep(0.1)
         
     def home(self, motor):
+        """ Homes the given motor.
+        Leaves the motor in the 0 (far-left) position
+        """
         self.logger.info("Homing %s..."%self.motorName(motor))
         if motor == self.MOTOR1:
             self.m1Homing = True
@@ -199,37 +270,37 @@ class TMC429():
             
         if switch:
             self.logger.info("Switch started triggered. Moving off...")
-            currentPos = readReg(motor | self.ACTUAL)
-            self.logger.debug("Current position:", currentPos)
+            currentPos = self.getActualSteps(motor)
+            self.logger.debug("Current position: %d"%currentPos)
             #Go forward some
             newPos = currentPos + 512
-            writeReg(motor | self.TARGET, newPos)
+            self.setTargetRawSteps(motor, newPos)
             sleep(0.5)
-            self.logger.debug("Current position:", readReg(motor | self.ACTUAL))
+            self.logger.debug("Current position: %d"%self.getActualSteps(motor))
             #Recheck switch
             switch = self.getSwitch(motor)
             self.logger.debug("Switch is now %r"%switch)
         if not switch:
             #Get current position to calculate error
-            currentPos = readReg(motor | self.ACTUAL)
+            currentPos = self.getActualSteps(motor)
             #Assume we're at full-right position
-            writeReg(motor | self.ACTUAL, 0x7fffff)
+            self.writeReg(motor | self.ACTUAL, 0x7fffff)
             #Prime X_Latched
-            writeReg(motor | self.LATCHED, 0)
+            self.writeReg(motor | self.LATCHED, 0)
             #Head towards 0
-            writeReg(motor | self.TARGET, 0)
+            self.setTargetRawSteps(motor, 0)
             while not switch:
                 switch = self.getSwitch(motor)
-                sleep(0.1)
+                sleep(0.01)
             self.logger.info("Hit switch...")
-            trigPos = readReg(motor | self.LATCHED)
+            trigPos = self.readReg(motor | self.LATCHED)
             self.logger.debug("Triggered at %d"%trigPos)
             #Go to trigger position
-            writeReg(motor | self.TARGET, trigPos)
+            self.setTargetRawSteps(motor, trigPos)
             while not self.getOnTarget(motor):
                 sleep(0.1)
             #set to 0
-            writeReg(motor | self.ACTUAL, 0)
+            self.writeReg(motor | self.ACTUAL, 0)
             homingError = (0x7fffff - trigPos) - currentPos
             self.logger.info("Homing error: %d"%homingError)
             if motor == self.MOTOR1:

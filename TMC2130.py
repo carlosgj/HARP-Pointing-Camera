@@ -1,5 +1,8 @@
 import logging
-import spidev
+try:
+    import spidev
+except ImportError:
+    import mockSpidev
 from time import sleep
 
 class TMC2130():
@@ -37,7 +40,6 @@ class TMC2130():
     
     READABLE = [GCONF, GSTAT, IOIN, TSTEP, XDIRECT, MSCNT, MSCURACT, CHOPCONF, DRV_STATUS, PWM_SCALE, LOST_STEPS]
     
-    shadowregs = [0]*0x72
 
     def __init__(self, spiDev, spiCh, name="TMC2130"):
         self.spi = spidev.SpiDev()
@@ -47,6 +49,7 @@ class TMC2130():
         self.spi.no_cs = False
         self.spiStatus = 0
         self.logger = logging.getLogger(name)
+        self.shadowregs = [0]*0x72
         self.STOP = False
 
     def initialize(self):
@@ -89,12 +92,36 @@ class TMC2130():
     def getDriverError(self):
         return (self.spiStatus >> 1)&1 == 1
         
-    def getStandstill(self):
+    def getReset(self):
         return self.spiStatus&1 == 1
         
     def getVersion(self):
         ioin = self.readReg(self.IOIN)
         return (ioin >> 24) & 255
+        
+    def writeBitfield(self, register, start, length, val):
+        newBits = val << start
+        register &= ~(((2**length)-1) << start) #Clear bits
+        register |= newBits
+        return register
+        
+    def setMicrostepping(self, MRES):
+        if MRES not in range(0, 9):
+            self.logger.warning("Attempted to set microstepping with illegal MRES %d"%MRES)
+            return 
+        newChopconf = self.writeBitfield(self.shadowregs[self.CHOPCONF], 24, 4, MRES)
+        self.writeReg(self.CHOPCONF, newChopconf)
+        
+    def setDEdge(self, value):
+        value = int(value)
+        newChopconf = self.writeBitfield(self.shadowregs[self.CHOPCONF], 29, 1, value)
+        self.writeReg(self.CHOPCONF, newChopconf)
+
+    def setPower(self, value):
+        """Turns current to motors on or off
+        """
+        # TODO
+        
         
     def readAll(self):
         res = {}
