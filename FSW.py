@@ -73,12 +73,6 @@ def executeCommand(opcode, data):
             mc.m1Homed = False
             mc.m2Homed = False
 
-        elif opcode == CTD.OP_DFC:
-            pass
-
-        elif opcode == CTD.OP_FFC:
-            pass
-
         elif opcode == CTD.OP_STP:
             pass
 
