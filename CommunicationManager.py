@@ -8,13 +8,10 @@ from enum import Enum
 import Queue
 import logging
 
-SERIAL_PORT = "COM12"
-BAUD = 115200
-
 class CommunicationManager():
-    def __init__(self, name="COMMMGR"):
+    def __init__(self, name="COMMMGR", port=None, baud=115200):
         self.hdlc = HDLC.SICHDLC(debug=False)
-        self.ser = serial.Serial(SERIAL_PORT, BAUD, timeout=0.1)
+        self.ser = serial.Serial(port, baud, timeout=0.1)
         self.commandQueue = Queue.Queue(10)
         self.responseQueue = Queue.Queue(10)
         self.STOP = False
