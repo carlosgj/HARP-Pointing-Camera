@@ -21,6 +21,7 @@ OP_SCW  = 20
 OP_SCF  = 21
 OP_KCS  = 22
 OP_KCX  = 23
+OP_SHD  = 24
  
 
 

@@ -25,84 +25,131 @@ m2Thread = Thread(target=motor2.run)
 mcThread = Thread(target=mc.run)
 cmThread = Thread(target=cm.run)
 
-def executeCommand(opcode, date):
+def executeCommand(opcode, data):
         #Commands
         if opcode == CTD.OP_NOOP:
             logger.info("Got NOOP, sending ACK")
             cm.responseQueue.put((CTD.RES_ACK, []))
+
         elif opcode == CTD.OP_RST:
             #TODO: figure out how to reset Pi
             pass
+
         elif opcode == CTD.OP_HOME:
+            cm.responseQueue.put((CTD.RES_ACK, []))
+            motor1.setPower(True)
+            motor2.setPower(True)
             mc.m1Homing = True
             mc.m2Homing = True
+
         elif opcode == CTD.OP_PT:
-            pass
+            if len(data) != 8:
+                logger.error("Received OP_PT with %d bytes of data"%len(data))
+                cm.responseQueue.put((CTD.RES_IMP, []))
+                return
+            cm.responseQueue.put((CTD.RES_ACK, []))
+            (x, y) = struct.unpack("ff", data)
+            logger.debug("Setting mirror angles to %f, %f"%(x, y))
+            mc.setTargetDegrees(mc.MOTOR1, x)
+            mc.setTargetDegrees(mc.MOTOR2, y)
+
         elif opcode == CTD.OP_COL:
             pass
+
         elif opcode == CTD.OP_TSC:
             pass
+
         elif opcode == CTD.OP_CTS:
             pass
+
         elif opcode == CTD.OP_CTX:
             pass
+
         elif opcode == CTD.OP_IDL:
-            pass
+            logger.info("Transitioning to idle state")
+            cm.responseQueue.put((CTD.RES_ACK, []))
+            motor1.setPower(False)
+            motor2.setPower(False)
+            mc.m1Homed = False
+            mc.m2Homed = False
+
         elif opcode == CTD.OP_DFC:
             pass
+
         elif opcode == CTD.OP_FFC:
             pass
+
         elif opcode == CTD.OP_STP:
             pass
+
         elif opcode == CTD.OP_WIE:
             pass
+
         elif opcode == CTD.OP_WID:
             pass
+
         elif opcode == CTD.OP_CRS:
             pass
+
         elif opcode == CTD.OP_SCI:
             pass
+
         elif opcode == CTD.OP_SCG:
             pass
+
         elif opcode == CTD.OP_SCM:
             pass
+
         elif opcode == CTD.OP_SCS:
             pass
+
         elif opcode == CTD.OP_SCW:
             pass
+        
         elif opcode == CTD.OP_SCF:
             pass
+
         elif opcode == CTD.OP_KCS:
             pass
+
         elif opcode == CTD.OP_KCX:
             pass
         
         #Queries
         elif opcode == CTD.OP_QSTA:
             pass
+
         elif opcode == CTD.OP_QANG:
-            pass
+            x = mc.getActualDegrees(mc.MOTOR1)
+            y = mc.getActualDegrees(mc.MOTOR2)
+            cm.responseQueue.put( ( CTD.RES_ANG, struct.pack("ff", float(x), float(y)) ) )
+
         elif opcode == CTD.OP_QNF:
             pass
+
         elif opcode == CTD.OP_QDF:
             pass
+
         elif opcode == CTD.OP_QLN:
             pass
+
         elif opcode == CTD.OP_QUT:
             uptime = int( time.time() - psutil.boot_time() )
             logger.info("Got QUT, sending %d (0x%08x)"%(uptime, uptime))
             cm.responseQueue.put( (CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', uptime))) )
+
         elif opcode == CTD.OP_QTIM:
             ctime = int(time.time())
             logger.info("Got QTIM, sending %d (0x%08x)"%(ctime, ctime))
             cm.responseQueue.put( (CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', ctime))) )
+
         elif opcode == CTD.OP_QTMP:
             pass
 
         else:
             #invalid opcode 
-            resp = self.hdlc.createPacket(CTD.RES_IMP, [])
-            self.ser.write(resp)
+            logger.error("Got invalid opcode 0x%02x"%opcode)
+            cm.responseQueue.put( (CTD.RES_IMP, []) )
             
 def initialize():
     motor1.initialize()
