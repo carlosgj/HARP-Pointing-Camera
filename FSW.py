@@ -7,6 +7,7 @@ from enum import Enum
 import TMC2130
 import TMC429
 import CommunicationManager
+import CameraManager
 from threading import Thread
 import logging
 logger = logging.getLogger("ROOT")
@@ -18,12 +19,14 @@ states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 motor1 = TMC2130.TMC2130(0, 1, name="MOTOR1")
 motor2 = TMC2130.TMC2130(0, 0, name="MOTOR2")
 mc = TMC429.TMC429(0, 2, name="MOTCON")
-cm = CommunicationManager.CommunicationManager()
+cm = CommunicationManager.CommunicationManager(port="COM12", baud="115200")
+cam = CameraManager.CameraManager(datadir="/mnt/data")
 
 m1Thread = Thread(target=motor1.run)
 m2Thread = Thread(target=motor2.run)
 mcThread = Thread(target=mc.run)
 cmThread = Thread(target=cm.run)
+camThread = Thread(target=cam.run)
 
 def executeCommand(opcode, data):
         #Commands
@@ -146,6 +149,7 @@ def executeCommand(opcode, data):
             cm.responseQueue.put( (CTD.RES_IMP, []) )
             
 def initialize():
+    cam.initialize()
     motor1.initialize()
     motor2.initialize()
     
@@ -163,6 +167,9 @@ def run():
         
         logger.critical("Starting communications manager")
         cmThread.start()
+
+        logger.critical("Starting camera")
+        camThread.start()
         
         logger.critical("Starting motor controller")
         mcThread.start()
