@@ -47,6 +47,7 @@ class TMC2130():
         self.spi.max_speed_hz = 100000
         self.spi.mode = 3
         self.spi.no_cs = False
+        self.spi.cshigh = True
         self.spiStatus = 0
         self.logger = logging.getLogger(name)
         self.shadowregs = [0]*0x72
@@ -55,33 +56,47 @@ class TMC2130():
     def initialize(self):
         #res = spi.xfer2([0x01, 0x00, 0x00, 0x00, 0x00])
         self.readReg(self.GSTAT)
+	
+        self.logger.info("Version is %x"%self.getVersion())
+        
         #res = spi.xfer2([0x80, 0x00, 0x00, 0x00, 0x05])
         self.writeReg(self.GCONF, 0x00000005)
+        self.logger.debug("Status: 0x%x"%self.spiStatus)
+        
         #res = spi.xfer2([0x90, 0x00, 0x00, 0x10, 0x10])
         self.writeReg(self.IHOLD_IRUN, 0x00001010)
+        self.logger.debug("Status: 0x%x"%self.spiStatus)
+        
         #res = spi.xfer2([0xec, 0x32, 0x02, 0x80, 0x08])
-        self.writeReg(self.CHOPCONF, 0x32028080)
+        self.writeReg(self.CHOPCONF, 0x32028008)
+        self.logger.debug("Status: 0x%x"%self.spiStatus)
+        #self.logger.debug(self.readAll())
         
     def writeReg(self, addr, data):
-        addr |= 0b10000000
         if isinstance(data, int):
             intData = data
             data = [ (data >> 24)&0xff, (data >> 16)&0xff, (data >> 8)&0xff, data&0xff ]
         else:
             intData = (data[0]<<24) + (data[1]<<16) + (data[2]<<8) + data[3] 
-        self.logger.debug("Writing %s to 0x%02x"%(', '.join(["0x%02x"%x for x in data]), addr))
+        self.logger.debug("Writing 0x%08x to 0x%02x"%(intData, addr))
+        self.shadowregs[addr] = intData 
+        addr |= 0b10000000
+
         res = self.spi.xfer2([addr] + data)
         self.spiStatus = res[0]
-        self.shadowregs[addr] = intData 
     
     def readReg(self, addr):
         addr &= 0b01111111
         #Dummy read to set address
-        self.logger.debug("Sending [0x%02x, 0, 0, 0]"%addr)
+        #self.logger.debug("Sending [0x%02x, 0, 0, 0, 0]"%addr)
         self.spi.xfer2([addr, 0, 0, 0, 0])
+        sleep(0.01)
         res = self.spi.xfer2([addr, 0, 0, 0, 0])
         self.spiStatus = res[0]
-        return (res[1] << 24) | (res[2] << 16) | (res[3] << 8) | (res[4])
+        self.logger.debug("Status: 0x%x"%self.spiStatus)
+        res = (res[1] << 24) | (res[2] << 16) | (res[3] << 8) | (res[4])
+        #self.logger.debug("0x%x is 0x%x"%(addr, res))
+        return res
         
     def getStandstill(self):
         return (self.spiStatus >> 3)&1 == 1

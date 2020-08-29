@@ -56,8 +56,8 @@ class TMC429():
     IFCONFIG_POSCOMP1   = 128
     IFCONFIG_ENREFR     = 256
     
-    M1_BORESIGHT_MICROSTEPS = 0
-    M2_BORESIGHT_MICROSTEPS = 0
+    M1_BORESIGHT_MICROSTEPS = 2304
+    M2_BORESIGHT_MICROSTEPS = 3071
 
     def __init__(self, spiDev, spiCh, name="TMC429", MRES=2, steps=200):
         self.spi = spidev.SpiDev()
@@ -100,6 +100,11 @@ class TMC429():
         """Initialize registers to common values"""
         #print writeReg(52,[0, 0, 0x20]) #Set en_sd
         self.writeReg(self.COMMON | self.IFCONFIG, self.IFCONFIG_ENSD)
+        self.logger.info("Version: 0x%x"%self.getVersion())
+        self.writeReg(self.MOTOR1 | self.ACTUAL, 0)
+        self.writeReg(self.MOTOR1 | self.TARGET, 0)
+        self.writeReg(self.MOTOR2 | self.ACTUAL, 0)
+        self.writeReg(self.MOTOR2 | self.TARGET, 0)
 
     def writeReg(self, addr, data):
         if isinstance(data, int):
@@ -107,7 +112,7 @@ class TMC429():
             data = [ (data >> 16)&0xff, (data >> 8)&0xff, data&0xff ]
         else:
             intData = (data[0]<<16) + (data[1]<<8) + data[2] 
-        self.logger.debug("Sending 0x%0.6x to 0x%0.2x"%(intData, addr))
+        #self.logger.debug("Sending 0x%0.6x to 0x%0.2x"%(intData, addr))
         addr = addr << 1
         res = self.spi.xfer2([addr]+data)
         self.spiStatus = res[0]
@@ -119,7 +124,7 @@ class TMC429():
         res = self.spi.xfer2([addr, 0, 0, 0])
         self.spiStatus = res[0]
         val = (res[1]<<16) + (res[2]<<8) + (res[3])
-        self.logger.debug("0x%0.2x is 0x%0.6x. SPI status is 0x%0.2x."%(origAddr, val, self.spiStatus))
+        #self.logger.debug("0x%0.2x is 0x%0.6x. SPI status is 0x%0.2x."%(origAddr, val, self.spiStatus))
         return val
         
     def getInt(self):
@@ -184,15 +189,17 @@ class TMC429():
 
         This is uncorrected for reference switch location.
         """
+        if (motor == self.MOTOR1 and self.m1Homing) or (motor==self.MOTOR2 and self.m2Homing):
+            return
         self.writeReg(motor | self.TARGET, target)
     
     def setTargetStepsCalibrated(self, motor, steps):
         """Sets the target in microsteps-off-boresight
         """
         if motor == self.MOTOR1:
-            self.setTargetRawSteps(motor, steps - self.M1_BORESIGHT_MICROSTEPS)
+            self.setTargetRawSteps(motor, steps + self.M1_BORESIGHT_MICROSTEPS)
         elif motor == self.MOTOR2:
-            self.setTargetRawSteps(motor, steps - self.M2_BORESIGHT_MICROSTEPS)
+            self.setTargetRawSteps(motor, steps + self.M2_BORESIGHT_MICROSTEPS)
     
     def setTargetDegrees(self, motor, degrees):
         """Sets the target in degrees-off-boresight
@@ -274,7 +281,7 @@ class TMC429():
             self.logger.debug("Current position: %d"%currentPos)
             #Go forward some
             newPos = currentPos + 512
-            self.setTargetRawSteps(motor, newPos)
+            self.writeReg(motor | self.TARGET, newPos)
             sleep(0.5)
             self.logger.debug("Current position: %d"%self.getActualSteps(motor))
             #Recheck switch
@@ -288,19 +295,22 @@ class TMC429():
             #Prime X_Latched
             self.writeReg(motor | self.LATCHED, 0)
             #Head towards 0
-            self.setTargetRawSteps(motor, 0)
+            self.writeReg(motor | self.TARGET, 0)
             while not switch:
                 switch = self.getSwitch(motor)
                 sleep(0.01)
+                if self.STOP:
+                    return
             self.logger.info("Hit switch...")
             trigPos = self.readReg(motor | self.LATCHED)
             self.logger.debug("Triggered at %d"%trigPos)
             #Go to trigger position
-            self.setTargetRawSteps(motor, trigPos)
+            self.writeReg(motor | self.TARGET, trigPos)
             while not self.getOnTarget(motor):
                 sleep(0.1)
             #set to 0
             self.writeReg(motor | self.ACTUAL, 0)
+            self.writeReg(motor | self.TARGET, 0)
             homingError = (0x7fffff - trigPos) - currentPos
             self.logger.info("Homing error: %d"%homingError)
             if motor == self.MOTOR1:

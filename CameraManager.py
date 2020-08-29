@@ -5,15 +5,18 @@ except ImportError:
 from datetime import datetime
 import logging
 from os import path
+from time import sleep
 
 class CameraManager():
     def __init__(self, name="CAMMGR", datadir="."):
         self.logger = logging.getLogger(name)
-        self.cam = PiCamera(resolution=(3280, 2464))
+	self.cam = None
+        #self.cam = PiCamera(resolution=(3280, 2464))
         self.datadir = datadir
 
     def __del__(self):
-        self.cam.close()
+        if self.cam:
+            self.cam.close()
 
     def initialize(self):
         pass
@@ -33,4 +36,4 @@ class CameraManager():
         self.cam.capture(path.join(self.datadir, name), format='jpg', bayer=bayer)
 
     def run(self):
-        pass
+        sleep(0.1)

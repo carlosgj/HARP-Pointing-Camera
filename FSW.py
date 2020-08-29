@@ -11,15 +11,24 @@ import CameraManager
 from threading import Thread
 import logging
 logger = logging.getLogger("ROOT")
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
+import RPi.GPIO as GPIO
+
+GPIO.setwarnings(False)
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(24, GPIO.OUT)
+GPIO.output(24, False)
+GPIO.setup(7, GPIO.OUT)
+GPIO.setup(8, GPIO.OUT)
 
 states = Enum('State', "IDLE HOMING READY MOVING COLLECTING")
 
 motor1 = TMC2130.TMC2130(0, 1, name="MOTOR1")
 motor2 = TMC2130.TMC2130(0, 0, name="MOTOR2")
 mc = TMC429.TMC429(0, 2, name="MOTCON")
-cm = CommunicationManager.CommunicationManager(port="COM12", baud="115200")
+cm = CommunicationManager.CommunicationManager(port="/dev/pts/2", baud="115200")
 cam = CameraManager.CameraManager(datadir="/mnt/data")
 
 m1Thread = Thread(target=motor1.run)
@@ -179,11 +188,16 @@ def run():
         
         logger.critical("Starting motor driver 2")
         m2Thread.start()
+
+        mc.m1Homing = True
+        mc.m2Homing = True
         while True:
             #Main loop
             if loopcount % 10 == 0:
                 logger.debug("Loop %d"%loopcount)
             #Check to see if we got any commands
+            mc.setTargetStepsCalibrated(mc.MOTOR1, 0)
+            mc.setTargetStepsCalibrated(mc.MOTOR2, 0)
             if not cm.commandQueue.empty():
                 (opcode, data) = cm.commandQueue.get()
                 executeCommand(opcode, data)
@@ -192,6 +206,7 @@ def run():
                     
             loopcount += 1
     except:
+        GPIO.output(24, True)
         motor1.STOP = True
         motor2.STOP = True
         mc.STOP = True
