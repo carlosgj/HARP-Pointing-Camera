@@ -4,6 +4,9 @@ try:
 except ImportError:
     import mockSpidev as spidev
 from time import sleep
+import RPi.GPIO as GPIO
+
+GPIO.setwarnings(False)
 
 class TMC429():
 
@@ -85,6 +88,10 @@ class TMC429():
         self.m2pos = None
         self.m1OnTarget = False
         self.m2OnTarget = False
+
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(24, GPIO.OUT)
+        self.setEnable(False)
         
     def motorName(self, motor):
         if motor == self.MOTOR1:
@@ -97,6 +104,7 @@ class TMC429():
             return "Invalid Motor"
         
     def initialize(self):
+        self.logger.info("Initializing...")
         """Initialize registers to common values"""
         #print writeReg(52,[0, 0, 0x20]) #Set en_sd
         self.writeReg(self.COMMON | self.IFCONFIG, self.IFCONFIG_ENSD)
@@ -189,7 +197,7 @@ class TMC429():
 
         This is uncorrected for reference switch location.
         """
-        if (motor == self.MOTOR1 and self.m1Homing) or (motor==self.MOTOR2 and self.m2Homing):
+        if (motor == self.MOTOR1 and not self.m1Homed) or (motor==self.MOTOR2 and not self.m2Homed):
             return
         self.writeReg(motor | self.TARGET, target)
     
@@ -241,6 +249,11 @@ class TMC429():
     def getVersion(self):
         """Returns the value of the VERSION register"""
         return self.readReg(self.COMMON | self.VERSION)
+
+    def setEnable(self, value):
+        """Turns H-bridges on or off via enable line
+        """
+        GPIO.output(24, not value)
         
     def run(self):
         while True:

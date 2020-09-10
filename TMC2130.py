@@ -54,6 +54,7 @@ class TMC2130():
         self.STOP = False
 
     def initialize(self):
+        self.logger.info("Initializing...")
         #res = spi.xfer2([0x01, 0x00, 0x00, 0x00, 0x00])
         self.readReg(self.GSTAT)
 	
