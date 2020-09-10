@@ -1,1 +1,7 @@
 *.pyc
+COSMOS/Vendor/
+COSMOS/tmp/
+COSMOS/Basic.zip
+COSMOS/Demo.zip
+COSMOS/HAB/lib/
+COSMOS/HAB/outputs/
