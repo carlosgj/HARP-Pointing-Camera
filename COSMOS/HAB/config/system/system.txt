@@ -2,8 +2,8 @@
 # DECLARE_TARGET target_name [substitute_name]
 
 # AUTO_DECLARE_TARGETS
-DECLARE_TARGET POINTING-CAMERA
-DECLARE_TARGET EXAMPLE
+DECLARE_TARGET PC
+#DECLARE_TARGET EXAMPLE
 DECLARE_TARGET SYSTEM
 
 # Listen Hosts - Ip addresses or hostnames to listen on when running the tools
