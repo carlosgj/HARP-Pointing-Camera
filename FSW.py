@@ -134,7 +134,7 @@ class PCExecutive():
         elif opcode == CTD.OP_QUT:
             uptime = int( time.time() - psutil.boot_time() )
             self.logger.info("Got QUT, sending %d (0x%08x)"%(uptime, uptime))
-            self.cm.responseQueue.put( (CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', uptime))) )
+            self.cm.responseQueue.put( (CTD.RES_UPT, struct.unpack('BBBB', struct.pack('>L', uptime))) )
 
         elif opcode == CTD.OP_QTIM:
             ctime = int(time.time())

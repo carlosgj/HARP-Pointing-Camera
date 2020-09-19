@@ -2,7 +2,7 @@ import logging
 try:
     import spidev
 except ImportError:
-    import mockSpidev
+    import mockSpidev as spidev
 from time import sleep
 
 class TMC2130():

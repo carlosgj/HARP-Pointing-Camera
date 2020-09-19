@@ -4,7 +4,10 @@ try:
 except ImportError:
     import mockSpidev as spidev
 from time import sleep
-import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    import mockGPIO as GPIO
 
 GPIO.setwarnings(False)
 
