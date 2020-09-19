@@ -52,7 +52,7 @@ class PCExecutive():
                 self.cm.responseQueue.put((CTD.RES_IMP, []))
                 return
             self.cm.responseQueue.put((CTD.RES_ACK, []))
-            (x, y) = struct.unpack("ff", data)
+            (x, y) = struct.unpack(">ff", data)
             self.logger.debug("Setting mirror angles to %f, %f"%(x, y))
             self.mc.setTargetDegrees(self.mc.MOTOR1, x)
             self.mc.setTargetDegrees(self.mc.MOTOR2, y)
