@@ -21,7 +21,7 @@ class PCExecutive():
         self.motor1 = TMC2130.TMC2130(0, 1, name="MOTOR1")
         self.motor2 = TMC2130.TMC2130(0, 0, name="MOTOR2")
         self.mc = TMC429.TMC429(0, 2, name="MOTCON")
-        self.cm = CommunicationManager.CommunicationManager(port="/dev/pts/2", baud="115200")
+        self.cm = CommunicationManager.CommunicationManager(port="COM6", baud="115200")
         self.cam = CameraManager.CameraManager(datadir="/mnt/data")
 
         self.m1Thread = Thread(target=self.motor1.run)
@@ -115,40 +115,42 @@ class PCExecutive():
         
         #Queries
         elif opcode == CTD.OP_QSTA:
-            pass
+            self.logger.debug("Got QSTA")
 
         elif opcode == CTD.OP_QANG:
             x = self.mc.getActualDegrees(self.mc.MOTOR1)
             y = self.mc.getActualDegrees(self.mc.MOTOR2)
-            self.cm.responseQueue.put( ( CTD.RES_ANG, struct.pack("ff", float(x), float(y)) ) )
+            self.logger.debug("Angles are %f, %f"%(x, y))
+            self.cm.responseQueue.put( ( CTD.RES_ANG, struct.unpack('BBBBBBBB', struct.pack(">ff", float(x), float(y)) )), timeout=1 )
 
         elif opcode == CTD.OP_QNF:
-            pass
+            self.logger.debug("Got QNF")
 
         elif opcode == CTD.OP_QDF:
-            pass
+            self.logger.debug("Got QDF")
 
         elif opcode == CTD.OP_QLN:
-            pass
+            self.logger.debug("Got QLN")
 
         elif opcode == CTD.OP_QUT:
             uptime = int( time.time() - psutil.boot_time() )
-            self.logger.info("Got QUT, sending %d (0x%08x)"%(uptime, uptime))
-            self.cm.responseQueue.put( (CTD.RES_UPT, struct.unpack('BBBB', struct.pack('>L', uptime))) )
+            self.logger.debug("Got QUT, sending %d (0x%08x)"%(uptime, uptime))
+            self.cm.responseQueue.put( (CTD.RES_UPT, struct.unpack('BBBB', struct.pack('>L', uptime))), timeout=1 )
 
         elif opcode == CTD.OP_QTIM:
             ctime = int(time.time())
-            self.logger.info("Got QTIM, sending %d (0x%08x)"%(ctime, ctime))
-            self.cm.responseQueue.put( (CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', ctime))) )
+            self.logger.debug("Got QTIM, sending %d (0x%08x)"%(ctime, ctime))
+            self.cm.responseQueue.put( (CTD.RES_TIM, struct.unpack('BBBB', struct.pack('>L', ctime))), timeout=1 )
 
         elif opcode == CTD.OP_QTMP:
-            pass
+            self.logger.debug("Got QTMP")
 
         else:
             #invalid opcode 
             self.logger.error("Got invalid opcode 0x%02x"%opcode)
             self.cm.responseQueue.put( (CTD.RES_IMP, []) )
-                
+
+
     def initialize(self):
         self.cam.initialize()
         self.motor1.initialize()
@@ -173,7 +175,7 @@ class PCExecutive():
             self.camThread.start()
             
             self.logger.critical("Starting motor controller")
-            self.mcThread.start()
+            #self.mcThread.start()
             
             self.logger.critical("Starting motor driver 1")
             self.m1Thread.start()
@@ -187,6 +189,13 @@ class PCExecutive():
                 #Main loop
                 if loopcount % 10 == 0:
                     self.logger.debug("Loop %d"%loopcount)
+                    self.executeCommand(CTD.OP_QUT, "")
+                    self.executeCommand(CTD.OP_QTIM, "")
+                    self.executeCommand(CTD.OP_QANG, "")
+                    self.executeCommand(CTD.OP_QSTA, "")
+                    self.executeCommand(CTD.OP_QNF, "")
+                    self.executeCommand(CTD.OP_QDF, "")
+                    self.executeCommand(CTD.OP_QTMP, "")
                 
                 self.mc.setTargetStepsCalibrated(self.mc.MOTOR1, 0)
                 self.mc.setTargetStepsCalibrated(self.mc.MOTOR2, 0)

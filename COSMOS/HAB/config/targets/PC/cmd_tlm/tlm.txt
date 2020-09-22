@@ -19,3 +19,22 @@ TELEMETRY PC UPT BIG_ENDIAN "Uptime"
     GENERIC_READ_CONVERSION_START STRING 216
       sprintf('%02u:%02u:%02u', packet.read('uptime')/3600, (packet.read('uptime')%3600)/60, packet.read('uptime')%60)
     GENERIC_READ_CONVERSION_END
+    
+TELEMETRY PC TIM BIG_ENDIAN "Time"
+    APPEND_ITEM LENGTH 8 UINT "Length"
+    APPEND_ID_ITEM OPCODE 8 UINT 166 "Opcode"
+        FORMAT_STRING "0x%0X"
+    APPEND_ITEM TIME 32 UINT "Time"
+    APPEND_ITEM CRC 16 UINT "CRC"
+        FORMAT_STRING "0x%0X"
+    ITEM TIMEFORMATTED 0 0 DERIVED "Formatted Time"
+        READ_CONVERSION unix_time_formatted_conversion.rb TIME
+        
+TELEMETRY PC ANG BIG_ENDIAN "Mirror Angles"
+    APPEND_ITEM LENGTH 8 UINT "Length"
+    APPEND_ID_ITEM OPCODE 8 UINT 161 "Opcode"
+        FORMAT_STRING "0x%0X"
+    APPEND_ITEM X 32 FLOAT "X"
+    APPEND_ITEM Y 32 FLOAT "Y"
+    APPEND_ITEM CRC 16 UINT "CRC"
+        FORMAT_STRING "0x%0X"

@@ -11,7 +11,7 @@ import logging
 class CommunicationManager():
     def __init__(self, name="COMMMGR", port=None, baud=115200):
         self.hdlc = HDLC.SICHDLC(debug=False)
-        self.ser = serial.Serial(port, baud, timeout=0.1)
+        self.ser = serial.Serial(port, baud, timeout=0)
         self.commandQueue = Queue.Queue(10)
         self.responseQueue = Queue.Queue(10)
         self.STOP = False
@@ -28,11 +28,7 @@ class CommunicationManager():
                 self.logger.critical("Received STOP signal")
                 self.ser.close()
                 break
-            if not self.responseQueue.empty():
-                (opcode, data) = self.responseQueue.get()
-                self.logger.info("Sending response 0x%0.2x with [%s]"%(opcode, ' '.join(["0x%0.2x"%x for x in data])))
-                resp = self.hdlc.createPacket(opcode, data)
-                self.ser.write(resp)
+
             c = self.ser.read(1)
             if c:
                 #print "Got 0x%02x"%ord(c)
@@ -54,6 +50,13 @@ class CommunicationManager():
                     buffer = ""
                     if not self.commandQueue.full():
                         self.commandQueue.put((opcode, data))
+
+            elif not self.responseQueue.empty():
+                (opcode, data) = self.responseQueue.get()
+                self.logger.debug("Sending response 0x%0.2x with [%s]"%(opcode, ' '.join(["0x%0.2x"%x for x in data])))
+                resp = self.hdlc.createPacket(opcode, data)
+                self.ser.write(resp)
+            
             else:
                 time.sleep(0.1)
                 
